@@ -24,34 +24,25 @@ def max_pool_2x2(x):
 y_ = tf.placeholder(tf.float32, shape=[None, 10])
 
 x_var  = tf.Variable(tf.constant(0.0, shape=[200,784], dtype=tf.float32))
-# x_image = tf.reshape(x_var, [200,28,28,1])
+x_image = tf.reshape(x_var, [200,28,28,1])
 
-# W_conv1 = weight_variable([3, 3, 1, 16])
-# b_conv1 = bias_variable([16])
-# h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
-# h_pool1 = max_pool_2x2(h_conv1)
-#
-# W_conv2 = weight_variable([3, 3, 16, 16])
-# b_conv2 = bias_variable([16])
-# h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
-# # h_pool2 = max_pool_2x2(h_conv2)
-#
-#
-# W_conv3 = weight_variable([3, 3, 16, 32])
-# b_conv3 = bias_variable([32])
-# h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3) + b_conv3)
-#
-# W_conv4 = weight_variable([3, 3, 32, 64])
-# b_conv4 = bias_variable([64])
-# h_conv4 = tf.nn.relu(conv2d(h_conv3, W_conv4) + b_conv4)
-# h_pool4 = max_pool_2x2(h_conv4)
-#
-#
-W_fc1 = weight_variable([28 * 28, 1024])
+W_conv1 = weight_variable([3, 3, 1, 16])
+b_conv1 = bias_variable([16])
+h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+h_pool1 = max_pool_2x2(h_conv1)
+
+
+W_conv4 = weight_variable([3, 3, 16, 32])
+b_conv4 = bias_variable([32])
+h_conv4 = tf.nn.relu(conv2d(h_pool1, W_conv4) + b_conv4)
+h_pool4 = max_pool_2x2(h_conv4)
+
+
+W_fc1 = weight_variable([7 * 7 * 32, 1024])
 b_fc1 = bias_variable([1024])
 
-# h_pool4_flat = tf.reshape(h_pool4, [-1, 7*7*64])
-h_fc1 = tf.nn.relu(tf.matmul(x_var, W_fc1) + b_fc1)
+h_pool4_flat = tf.reshape(h_pool4, [-1, 7*7*32])
+h_fc1 = tf.nn.relu(tf.matmul(h_pool4_flat, W_fc1) + b_fc1)
 #
 keep_prob = tf.placeholder(tf.float32)
 # h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
@@ -100,7 +91,7 @@ adverserial_update = tf.gradients(objective, [x_var])[0]
 sess.run(tf.initialize_all_variables())
 saver = tf.train.Saver()
 
-for i in range(500):
+for i in range(2000):
     batch = mnist.train.next_batch(200)
 
     if i%100 == 0 and i!=0:
@@ -111,9 +102,9 @@ for i in range(500):
 
     _, loss_val = sess.run([train_step, cross_entropy], feed_dict={y_: batch[1], keep_prob: 0.5})
 
-save_path = saver.save(sess, "model.ckpt")
-
-saver.restore(sess, "model.ckpt")
+# save_path = saver.save(sess, "model.ckpt")
+#
+# saver.restore(sess, "model.ckpt")
 data_assign = x_var.assign(np.asarray(mnist.test.images[:200]).astype(float))
 sess.run(data_assign)
 print("test accuracy %g"%accuracy.eval(feed_dict={y_: mnist.test.labels[:200], keep_prob: 1.0}))
@@ -125,8 +116,8 @@ print mnist.test.labels[0]
 
 for i in range(1):
     grad = sess.run([adverserial_update], feed_dict={y_: mnist.test.labels[:200], keep_prob: 1.0})
-    # X = np.asarray(mnist.test.images[0]) + 0.0001*np.sign(grad[0][0])
-    X = np.asarray(mnist.test.images[0]) + 1000000.0*grad[0][0]
+    print grad
+    X = np.asarray(mnist.test.images[0]) + 1000000000.0*grad[0][0]
     gg = sess.run([y_conv], feed_dict={y_: mnist.test.labels[:200], keep_prob: 1.0})
     X_modified = mnist.test.images[:200]
     X_modified[0] = X
